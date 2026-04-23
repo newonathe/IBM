@@ -590,14 +590,6 @@
     const panelWidth = getEffectiveWorkspacePanelWidth();
 
     app.innerHTML = `
-      ${renderTopDock({
-        title: page.title,
-        subtitle: page.subtitle,
-        progress,
-        nextTopic,
-        currentFocus: getActiveTopicLabel(),
-        splitMode
-      })}
       <section class="studio-layout ${splitMode ? "split-mode" : ""}" style="--workspace-panel-width:${panelWidth}px;">
         <aside class="roadmap-rail">
           ${renderRoadmapRail(page, progress, programProgress)}
@@ -639,10 +631,6 @@
             </div>
           </section>
 
-          <section class="shortcut-strip">
-            ${renderTopicShortcuts(page)}
-          </section>
-
           <section class="chapter-stack">
             ${page.chapters.map((chapter, index) => renderChapter(chapter, index)).join("")}
           </section>
@@ -659,15 +647,6 @@
 
   function renderIdePage() {
     app.innerHTML = `
-      ${renderTopDock({
-        title: "Full IDE Lab",
-        subtitle: "Use this page for free-form experiments, challenge practice, HTML previews, and loading starter code from any lesson.",
-        progress: null,
-        nextTopic: null,
-        currentFocus: "Full IDE workspace",
-        splitMode: true,
-        ideMode: true
-      })}
       <section class="ide-layout">
         <aside class="roadmap-rail">
           <section class="rail-card">

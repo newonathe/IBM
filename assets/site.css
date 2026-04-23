@@ -25,7 +25,7 @@
   --radius-xl: 28px;
   --radius-lg: 22px;
   --radius-md: 16px;
-  --max: 1600px;
+  --max: 1800px;
   --page-shell-padding: clamp(12px, 2vw, 24px);
   --workspace-panel-width: 460px;
   --header-top: 12px;
@@ -420,16 +420,16 @@ textarea:focus-visible {
 .studio-layout,
 .ide-layout {
   display: grid;
-  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 248px) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
 
 .studio-layout.split-mode {
   grid-template-columns:
-    minmax(240px, 280px)
+    minmax(220px, 248px)
     minmax(0, 1fr)
-    minmax(380px, var(--workspace-panel-width));
+    minmax(360px, var(--workspace-panel-width));
 }
 
 .roadmap-rail,
@@ -509,7 +509,6 @@ textarea:focus-visible {
 }
 
 .hero-terminal-copy h1,
-.rail-card h2,
 .chapter-card h2,
 .interactive-card h3,
 .assessment-shell h2,
@@ -521,6 +520,15 @@ textarea:focus-visible {
   font-size: clamp(1.9rem, 2.8vw, 3rem);
   line-height: 1.08;
   overflow-wrap: anywhere;
+}
+
+.rail-card h2 {
+  margin: 0;
+  font-family: var(--heading);
+  font-size: clamp(1.45rem, 1.8vw, 2rem);
+  line-height: 1.08;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .hero-copy,
@@ -613,6 +621,19 @@ textarea:focus-visible {
 .topic-copy small,
 .source-button span {
   color: var(--text-muted);
+}
+
+.part-rail-link strong,
+.topic-copy strong,
+.source-button strong {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.topic-copy small,
+.part-rail-link small {
+  line-height: 1.3;
 }
 
 .topic-link {
@@ -838,6 +859,14 @@ textarea:focus-visible {
   min-height: clamp(380px, 54vh, 560px);
 }
 
+.workspace-panel:not(.full-page) h2 {
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+}
+
+.workspace-panel:not(.full-page) .workspace-editor {
+  min-height: clamp(240px, 32vh, 340px);
+}
+
 .workspace-column {
   min-width: 0;
 }
@@ -1002,9 +1031,9 @@ textarea:focus-visible {
   }
 }
 
-@media (max-width: 1560px) {
+@media (max-width: 1700px) {
   .studio-layout.split-mode {
-    grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+    grid-template-columns: minmax(220px, 248px) minmax(0, 1fr);
   }
 
   .studio-layout.split-mode .workspace-column {
