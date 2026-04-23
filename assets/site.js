@@ -42,6 +42,7 @@
       setupMessage: ""
     }
   };
+  let layoutSyncFrame = 0;
 
   const DB = {
     name: "programmer-masterclass-local-store",
@@ -255,6 +256,7 @@
 
   function bindGlobalEvents() {
     authTrigger?.addEventListener("click", () => openAuthModal());
+    window.addEventListener("resize", scheduleLayoutSync, { passive: true });
 
     document.addEventListener("click", async (event) => {
       const trigger = event.target.closest("[data-action]");
@@ -492,7 +494,8 @@
       }
 
       if (target.matches(".workspace-width-range")) {
-        state.workspaceState.panelWidth = Number(target.value);
+        const bounds = getSplitPanelBounds();
+        state.workspaceState.panelWidth = clamp(Number(target.value), bounds.min, bounds.max);
         queueWorkspacePersist();
         updateWorkspaceLayout();
       }
@@ -544,6 +547,7 @@
       renderLessonPage();
     }
     updateTimerDisplays();
+    scheduleLayoutSync();
   }
 
   function updateHeaderChrome() {
@@ -580,7 +584,7 @@
           </div>
         `;
 
-    body.style.setProperty("--workspace-panel-width", `${state.workspaceState.panelWidth}px`);
+    body.style.setProperty("--workspace-panel-width", `${getEffectiveWorkspacePanelWidth()}px`);
     body.dataset.splitMode = String(Boolean(state.workspaceState.splitMode && !isIdePage));
     document.title = isIdePage
       ? `${content.meta.guideTitle} | IDE Lab`
@@ -593,6 +597,7 @@
     const programProgress = getProgramProgress();
     const nextTopic = getNextPendingTopic(page);
     const splitMode = state.workspaceState.splitMode;
+    const panelWidth = getEffectiveWorkspacePanelWidth();
 
     app.innerHTML = `
       ${renderTopDock({
@@ -603,7 +608,7 @@
         currentFocus: getActiveTopicLabel(),
         splitMode
       })}
-      <section class="studio-layout ${splitMode ? "split-mode" : ""}" style="--workspace-panel-width:${state.workspaceState.panelWidth}px;">
+      <section class="studio-layout ${splitMode ? "split-mode" : ""}" style="--workspace-panel-width:${panelWidth}px;">
         <aside class="roadmap-rail">
           ${renderRoadmapRail(page, progress, programProgress)}
         </aside>
@@ -1101,6 +1106,8 @@
     const buffer = state.workspaceState.buffers[language] || "";
     const output = state.workspaceState.outputs[language] || "No output yet.";
     const previewHtml = language === "html" ? state.workspaceState.previewHtml : state.workspaceState.previewHtml;
+    const splitBounds = getSplitPanelBounds();
+    const panelWidth = getEffectiveWorkspacePanelWidth();
 
     return `
       <section class="workspace-panel ${fullPage ? "full-page" : ""}">
@@ -1125,7 +1132,7 @@
             ${!fullPage ? `
               <label class="slider-label">
                 <span>Split width</span>
-                <input class="workspace-width-range" type="range" min="420" max="860" step="10" value="${state.workspaceState.panelWidth}">
+                <input class="workspace-width-range" type="range" min="${splitBounds.min}" max="${splitBounds.max}" step="10" value="${panelWidth}">
               </label>
             ` : ""}
             <button class="ghost-button" type="button" data-action="workspace-preset" data-preset="javascript">JS Starter</button>
@@ -1445,7 +1452,7 @@
     return {
       activeLanguage: "javascript",
       splitMode: !isIdePage,
-      panelWidth: 560,
+      panelWidth: 480,
       loadedSource: "Scratchpad starter",
       buffers: {
         javascript: "function greet(name) {\n  return `Hello, ${name}!`;\n}\n\nconsole.log(greet(\"Programmer\"));",
@@ -2325,9 +2332,58 @@
   }
 
   function updateWorkspaceLayout() {
-    document.querySelectorAll(".studio-layout").forEach((layout) => {
-      layout.style.setProperty("--workspace-panel-width", `${state.workspaceState.panelWidth}px`);
+    syncLayoutMetrics();
+  }
+
+  function scheduleLayoutSync() {
+    if (layoutSyncFrame) {
+      window.cancelAnimationFrame(layoutSyncFrame);
+    }
+    layoutSyncFrame = window.requestAnimationFrame(() => {
+      layoutSyncFrame = 0;
+      syncLayoutMetrics();
     });
+  }
+
+  function syncLayoutMetrics() {
+    const header = document.querySelector(".site-header");
+    if (header) {
+      document.documentElement.style.setProperty("--header-height", `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    }
+
+    const effectiveWidth = getEffectiveWorkspacePanelWidth();
+    body.style.setProperty("--workspace-panel-width", `${effectiveWidth}px`);
+
+    document.querySelectorAll(".studio-layout").forEach((layout) => {
+      layout.style.setProperty("--workspace-panel-width", `${effectiveWidth}px`);
+    });
+
+    const bounds = getSplitPanelBounds();
+    document.querySelectorAll(".workspace-width-range").forEach((range) => {
+      range.min = String(bounds.min);
+      range.max = String(bounds.max);
+      range.value = String(effectiveWidth);
+    });
+  }
+
+  function getSplitPanelBounds() {
+    const min = 340;
+    const shell = document.querySelector(".page-shell");
+    const shellWidth = Math.max(960, Math.floor(shell?.clientWidth || window.innerWidth));
+    const railWidth = 280;
+    const contentMin = shellWidth > 1500 ? 500 : shellWidth > 1280 ? 420 : 360;
+    const gapAllowance = 44;
+    const naturalMax = Math.min(720, Math.floor(shellWidth * 0.32));
+    const availableMax = Math.floor(shellWidth - railWidth - contentMin - gapAllowance);
+    return {
+      min,
+      max: Math.max(min, Math.min(naturalMax, availableMax > 0 ? availableMax : naturalMax))
+    };
+  }
+
+  function getEffectiveWorkspacePanelWidth() {
+    const bounds = getSplitPanelBounds();
+    return clamp(state.workspaceState.panelWidth || 480, bounds.min, bounds.max);
   }
 
   function classifyGrowth(samples) {
@@ -2370,6 +2426,10 @@
       lines.push(`Total runtime: ${result.totalMs.toFixed(2)} ms`);
     }
     return lines.join("\n");
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
   }
 
   function formatDuration(ms) {

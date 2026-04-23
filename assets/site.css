@@ -26,7 +26,12 @@
   --radius-lg: 22px;
   --radius-md: 16px;
   --max: 1600px;
-  --workspace-panel-width: 560px;
+  --page-shell-padding: clamp(12px, 2vw, 24px);
+  --workspace-panel-width: 480px;
+  --header-top: 12px;
+  --header-height: 0px;
+  --sticky-gap: 14px;
+  --sticky-stack-top: calc(var(--header-top) + var(--header-height) + var(--sticky-gap));
 }
 
 *,
@@ -76,68 +81,81 @@ pre {
 .page-shell {
   max-width: var(--max);
   margin: 0 auto;
-  padding: clamp(12px, 2vw, 24px);
+  padding: var(--page-shell-padding);
 }
 
 .site-header {
   position: sticky;
-  top: 12px;
+  top: var(--header-top);
   z-index: 60;
   display: grid;
-  gap: 14px;
-  padding: 16px 18px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 10px 14px;
   margin-bottom: 18px;
-  background: rgba(8, 19, 34, 0.86);
+  background: rgba(8, 19, 34, 0.94);
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: 22px;
   backdrop-filter: blur(18px);
   box-shadow: var(--shadow-soft);
 }
 
 .header-row {
-  display: grid;
-  gap: 14px;
-  align-items: center;
-  min-width: 0;
+  display: contents;
 }
 
 .header-row-primary,
 .header-row-secondary {
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: contents;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
 }
 
 .brand {
   display: inline-flex;
   flex-direction: column;
-  gap: 4px;
-  max-width: 34rem;
+  gap: 2px;
+  max-width: min(20rem, 100%);
   text-decoration: none;
+  min-width: 0;
 }
 
 .brand-kicker,
 .eyebrow,
 .summary-label,
 .chip-label {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--teal);
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .brand-title {
   font-family: var(--heading);
-  font-size: clamp(1.15rem, 1.4vw, 1.45rem);
+  font-size: clamp(1rem, 1vw, 1.18rem);
   font-weight: 700;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
 }
 
 .site-nav {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
   overflow-x: auto;
-  padding-bottom: 4px;
+  overflow-y: hidden;
+  padding-bottom: 2px;
   scrollbar-width: thin;
 }
 
@@ -158,11 +176,15 @@ pre {
 }
 
 .nav-link {
-  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 7px 12px;
   border-radius: 999px;
   text-decoration: none;
   color: var(--text-soft);
   font-weight: 700;
+  font-size: 0.95rem;
   white-space: nowrap;
   flex: 0 0 auto;
 }
@@ -183,7 +205,7 @@ pre {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -196,27 +218,27 @@ pre {
 .user-pill {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 18px;
-  background: rgba(17, 35, 60, 0.9);
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: rgba(17, 35, 60, 0.96);
   border: 1px solid var(--line);
-  box-shadow: var(--shadow-soft);
+  box-shadow: none;
   min-width: 0;
 }
 
 .status-chip {
   flex-direction: column;
-  gap: 4px;
-  max-width: min(100%, 280px);
+  gap: 3px;
+  max-width: min(100%, 18rem);
 }
 
 .status-chip strong,
 .user-pill strong {
   display: block;
   font-family: var(--mono);
-  font-size: 0.95rem;
-  line-height: 1.3;
+  font-size: 0.88rem;
+  line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
@@ -226,7 +248,8 @@ pre {
 
 .user-pill {
   justify-content: space-between;
-  width: min(100%, 360px);
+  width: auto;
+  max-width: min(100%, 19rem);
 }
 
 .user-pill-copy {
@@ -234,6 +257,11 @@ pre {
   gap: 2px;
   min-width: 0;
   flex: 1 1 auto;
+}
+
+.site-header .ghost-button {
+  min-height: 36px;
+  padding: 8px 14px;
 }
 
 .ghost-button,
@@ -331,10 +359,10 @@ textarea:focus-visible {
 
 .top-dock {
   position: sticky;
-  top: 132px;
+  top: var(--sticky-stack-top);
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 14px;
 }
 
@@ -358,7 +386,7 @@ textarea:focus-visible {
 }
 
 .dock-card {
-  padding: 18px;
+  padding: 16px;
   min-width: 0;
 }
 
@@ -366,7 +394,9 @@ textarea:focus-visible {
   display: block;
   margin-top: 8px;
   font-family: var(--mono);
-  font-size: 1.3rem;
+  font-size: clamp(1.02rem, 1.7vw, 1.2rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .dock-card p {
@@ -389,16 +419,16 @@ textarea:focus-visible {
 .studio-layout,
 .ide-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
 
 .studio-layout.split-mode {
   grid-template-columns:
-    minmax(260px, 300px)
+    minmax(240px, 280px)
     minmax(0, 1fr)
-    minmax(340px, min(40vw, var(--workspace-panel-width)));
+    minmax(340px, min(32vw, var(--workspace-panel-width)));
 }
 
 .roadmap-rail,
@@ -438,12 +468,19 @@ textarea:focus-visible {
   padding: 28px;
 }
 
+.workspace-panel,
+.dock-card,
+.rail-card {
+  container-type: inline-size;
+}
+
 .hero-terminal {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.95fr);
-  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 18px;
   overflow: hidden;
   position: relative;
+  container-type: inline-size;
 }
 
 .hero-terminal::before {
@@ -460,6 +497,13 @@ textarea:focus-visible {
 .hero-terminal-panels {
   position: relative;
   z-index: 1;
+  min-width: 0;
+}
+
+.hero-terminal-copy {
+  display: grid;
+  align-content: start;
+  gap: 12px;
 }
 
 .hero-terminal-copy h1,
@@ -474,6 +518,7 @@ textarea:focus-visible {
   font-family: var(--heading);
   font-size: clamp(1.9rem, 2.8vw, 3rem);
   line-height: 1.08;
+  overflow-wrap: anywhere;
 }
 
 .hero-copy,
@@ -485,6 +530,7 @@ textarea:focus-visible {
 .workspace-panel p,
 .fallback-card p {
   color: var(--text-soft);
+  overflow-wrap: anywhere;
 }
 
 .hero-pills {
@@ -506,6 +552,7 @@ textarea:focus-visible {
 
 .hero-terminal-panels {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 14px;
 }
 
@@ -520,6 +567,7 @@ textarea:focus-visible {
   border-radius: var(--radius-lg);
   padding: 18px;
   box-shadow: var(--shadow-soft);
+  min-width: 0;
 }
 
 .summary-card strong {
@@ -527,6 +575,8 @@ textarea:focus-visible {
   margin-top: 10px;
   font-family: var(--heading);
   font-size: 1.45rem;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
 }
 
 .shortcut-strip,
@@ -552,6 +602,8 @@ textarea:focus-visible {
   border-radius: var(--radius-md);
   text-decoration: none;
   text-align: left;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .part-rail-link span,
@@ -562,8 +614,14 @@ textarea:focus-visible {
 }
 
 .topic-link {
-  grid-template-columns: 44px 1fr;
+  grid-template-columns: 44px minmax(0, 1fr);
   align-items: center;
+}
+
+.topic-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 .topic-link.done {
@@ -594,9 +652,9 @@ textarea:focus-visible {
 .chapter-header,
 .card-header,
 .workspace-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 18px;
 }
 
@@ -737,28 +795,29 @@ textarea:focus-visible {
 }
 
 .workspace-panel.full-page {
-  min-height: calc(100vh - 250px);
+  min-height: calc(100vh - var(--sticky-stack-top) - 48px);
 }
 
 .workspace-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  justify-content: space-between;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 16px;
   margin: 18px 0;
 }
 
 .workspace-grid {
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: start;
 }
 
 .workspace-editor {
-  min-height: 520px;
+  min-height: clamp(320px, 50vh, 520px);
 }
 
 .workspace-output-pane {
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 
 .workspace-column {
@@ -767,12 +826,13 @@ textarea:focus-visible {
 
 .studio-layout.split-mode .workspace-column {
   position: sticky;
-  top: 132px;
+  top: var(--sticky-stack-top);
 }
 
 .studio-layout.split-mode .workspace-column .workspace-panel {
-  max-height: calc(100vh - 148px);
+  max-height: calc(100vh - var(--sticky-stack-top) - 18px);
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .history-stack {
@@ -799,7 +859,7 @@ textarea:focus-visible {
 
 .preview-frame {
   width: 100%;
-  min-height: 280px;
+  min-height: clamp(220px, 34vh, 320px);
   border: 1px solid var(--line);
   border-radius: 16px;
   background: white;
@@ -817,12 +877,16 @@ textarea:focus-visible {
 .slider-label {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+  max-width: 100%;
   color: var(--text-soft);
 }
 
 .workspace-width-range {
-  width: 170px;
+  flex: 1 1 150px;
+  width: min(100%, 180px);
+  min-width: 0;
 }
 
 .metric-line {
@@ -951,13 +1015,22 @@ textarea:focus-visible {
   }
 }
 
+@media (max-width: 1240px) {
+  .site-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .site-nav {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 900px) {
-  .header-row-primary,
-  .header-row-secondary,
-  .workspace-controls {
+  .site-header {
     grid-template-columns: 1fr;
   }
 
+  .header-meta,
   .header-account,
   .global-status {
     justify-content: flex-start;
@@ -976,15 +1049,17 @@ textarea:focus-visible {
   .chapter-header,
   .card-header,
   .workspace-header {
-    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .site-nav {
     margin-inline: -2px;
   }
 
+  .header-meta,
   .user-pill {
     width: 100%;
+    max-width: 100%;
   }
 
   .workspace-editor {
@@ -993,14 +1068,18 @@ textarea:focus-visible {
 }
 
 @media (max-width: 720px) {
+  :root {
+    --header-top: 8px;
+    --sticky-gap: 10px;
+  }
+
   .top-dock {
     position: static;
     grid-template-columns: 1fr;
   }
 
   .site-header {
-    top: 8px;
-    padding: 14px;
+    padding: 10px 12px;
   }
 
   .hero-terminal,
@@ -1017,5 +1096,23 @@ textarea:focus-visible {
 
   .workspace-editor {
     min-height: 320px;
+  }
+}
+
+@container (max-width: 760px) {
+  .workspace-header,
+  .workspace-controls,
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-actions,
+  .workspace-control-group {
+    justify-content: flex-start;
+  }
+
+  .slider-label,
+  .workspace-width-range {
+    width: 100%;
   }
 }
