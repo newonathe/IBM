@@ -13,21 +13,25 @@
 <body data-page="ide">
   <div class="page-shell">
     <header class="site-header">
-      <a class="brand" href="index.html">
-        <span class="brand-kicker">Zero-to-industry coding studio</span>
-        <span class="brand-title">Programmer Masterclass</span>
-      </a>
-      <nav class="site-nav" aria-label="Primary">
-        <a class="nav-link" data-nav="part1" href="index.html">Part 1</a>
-        <a class="nav-link" data-nav="part2" href="part2.html">Part 2</a>
-        <a class="nav-link" data-nav="part3" href="part3.html">Part 3</a>
-        <a class="nav-link" data-nav="part4" href="part4.html">Part 4</a>
-        <a class="nav-link" data-nav="ide" href="ide.html">IDE</a>
-      </nav>
-      <div class="header-actions">
+      <div class="header-row header-row-primary">
+        <a class="brand" href="index.html">
+          <span class="brand-kicker">Zero-to-industry coding studio</span>
+          <span class="brand-title">Programmer Masterclass</span>
+        </a>
+        <div class="header-account">
+          <div id="user-pill" class="user-pill" aria-live="polite"></div>
+          <button id="auth-trigger" class="ghost-button" type="button">Sign In</button>
+        </div>
+      </div>
+      <div class="header-row header-row-secondary">
+        <nav class="site-nav" aria-label="Primary">
+          <a class="nav-link" data-nav="part1" href="index.html">Part 1</a>
+          <a class="nav-link" data-nav="part2" href="part2.html">Part 2</a>
+          <a class="nav-link" data-nav="part3" href="part3.html">Part 3</a>
+          <a class="nav-link" data-nav="part4" href="part4.html">Part 4</a>
+          <a class="nav-link" data-nav="ide" href="ide.html">IDE</a>
+        </nav>
         <div id="global-status" class="global-status" aria-live="polite"></div>
-        <div id="user-pill" class="user-pill" aria-live="polite"></div>
-        <button id="auth-trigger" class="ghost-button" type="button">Sign In</button>
       </div>
     </header>
     <main id="app" class="site-main">

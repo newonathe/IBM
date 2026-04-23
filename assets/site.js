@@ -554,16 +554,12 @@
     if (globalStatus) {
       globalStatus.innerHTML = `
         <div class="status-chip">
+          <span class="chip-label">Current focus</span>
+          <strong>${escapeHtml(currentFocus)}</strong>
+        </div>
+        <div class="status-chip">
           <span class="chip-label">Local time</span>
           <strong id="global-real-clock">${escapeHtml(formatWallClock(new Date()))}</strong>
-        </div>
-        <div class="status-chip">
-          <span class="chip-label">Focus</span>
-          <strong id="global-focus-clock">${escapeHtml(formatDuration(getFocusElapsedMs()))}</strong>
-        </div>
-        <div class="status-chip">
-          <span class="chip-label">Exam</span>
-          <strong id="global-exam-clock">${escapeHtml(formatDuration(getExamRemainingMs()))}</strong>
         </div>
       `;
     }
@@ -571,13 +567,17 @@
     authTrigger.textContent = state.currentUser ? "Account" : "Sign In";
     userPill.innerHTML = state.currentUser
       ? `
-          <strong>${escapeHtml(state.currentUser.displayName)}</strong>
-          <span>${escapeHtml(state.currentUser.authType === "supabase" ? "Supabase sync on" : "Local browser profile")}</span>
+          <div class="user-pill-copy">
+            <strong>${escapeHtml(state.currentUser.displayName)}</strong>
+            <span>${escapeHtml(state.currentUser.authType === "supabase" ? "Supabase sync on" : "Local browser profile")}</span>
+          </div>
           <button class="text-button" type="button" data-action="logout-inline">Sign out</button>
         `
       : `
-          <strong>Guest mode</strong>
-          <span>${escapeHtml(state.supabase.available ? "Open for everyone · cloud sync optional" : "Open for everyone · local saves active")}</span>
+          <div class="user-pill-copy">
+            <strong>Guest mode</strong>
+            <span>${escapeHtml(state.supabase.available ? "Open for everyone · cloud sync optional" : "Open for everyone · local saves active")}</span>
+          </div>
         `;
 
     body.style.setProperty("--workspace-panel-width", `${state.workspaceState.panelWidth}px`);
@@ -731,6 +731,11 @@
           <p>${escapeHtml(ideMode ? subtitle : `You are in ${page.label}. ${subtitle}`)}</p>
         </div>
         <div class="dock-card">
+          <span class="summary-label">Local time</span>
+          <strong id="dock-local-clock">${escapeHtml(formatWallClock(new Date()))}</strong>
+          <p>Visible while you move through the lesson.</p>
+        </div>
+        <div class="dock-card">
           <span class="summary-label">Focus timer</span>
           <strong id="dock-focus-clock">${escapeHtml(formatDuration(getFocusElapsedMs()))}</strong>
           <div class="dock-controls">
@@ -749,8 +754,8 @@
           </div>
         </div>
         <div class="dock-card">
-          <span class="summary-label">Status</span>
-          <strong>${escapeHtml(progress ? `${progress.percent}% complete` : state.workspaceState.loadedSource || "Scratchpad")}</strong>
+          <span class="summary-label">${escapeHtml(progress ? "Progress" : "Status")}</span>
+          <strong>${escapeHtml(progress ? `${progress.completedUnits}/${progress.totalUnits} checkpoints` : state.workspaceState.loadedSource || "Scratchpad")}</strong>
           <p>${escapeHtml(nextTopic ? `Next topic: ${nextTopic.title}` : state.supabase.setupMessage || "Ready to code.")}</p>
         </div>
       </section>
@@ -2171,9 +2176,9 @@
   }
 
   function updateTimerDisplays() {
-    const realClockEls = ["global-real-clock"];
-    const focusEls = ["global-focus-clock", "dock-focus-clock"];
-    const examEls = ["global-exam-clock", "dock-exam-clock"];
+    const realClockEls = ["global-real-clock", "dock-local-clock"];
+    const focusEls = ["dock-focus-clock"];
+    const examEls = ["dock-exam-clock"];
     const now = formatWallClock(new Date());
     const focus = formatDuration(getFocusElapsedMs());
     const exam = formatDuration(getExamRemainingMs());
