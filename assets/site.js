@@ -2,15 +2,21 @@
   const content = window.PROGRAMMER_MASTERCLASS_CONTENT || window.IBM_PREP_CONTENT;
   const body = document.body;
   const pageId = body.dataset.page;
+  const query = new URLSearchParams(window.location.search);
   const isIdePage = pageId === "ide";
-  const page = isIdePage ? null : content?.parts?.[pageId];
+  const isTopicPage = pageId === "topic";
+  const activePartId = isTopicPage ? query.get("part") : (isIdePage ? null : pageId);
+  const page = activePartId ? content?.parts?.[activePartId] : null;
+  const topic = isTopicPage && page
+    ? page.chapters.find((chapter) => chapter.id === query.get("topic")) || page.chapters[0] || null
+    : null;
   const app = document.getElementById("app");
   const authRoot = document.getElementById("auth-modal-root");
   const authTrigger = document.getElementById("auth-trigger");
   const userPill = document.getElementById("user-pill");
   const globalStatus = document.getElementById("global-status");
 
-  if (!content || !app || (!page && !isIdePage)) {
+  if (!content || !app || (!isIdePage && (!page || (isTopicPage && !topic)))) {
     return;
   }
 
@@ -19,7 +25,7 @@
     pageState: createDefaultPageState(page),
     workspaceState: createDefaultWorkspaceState(),
     allStats: {},
-    activeTopicId: page?.chapters?.[0]?.id || "assessment",
+    activeTopicId: topic?.id || page?.chapters?.[0]?.id || "assessment",
     pagePersistTimer: null,
     workspacePersistTimer: null,
     tickHandle: null,
@@ -113,6 +119,9 @@
     await restoreIdentity();
     await loadPageState();
     await loadWorkspaceState();
+    if (!isIdePage) {
+      state.workspaceState.splitMode = false;
+    }
     await loadOverallStats();
     renderCurrentView();
     startTicking();
@@ -131,7 +140,7 @@
 
   function markActiveNav() {
     document.querySelectorAll("[data-nav]").forEach((link) => {
-      if (link.dataset.nav === pageId) {
+      if (link.dataset.nav === activePartId) {
         link.classList.add("active");
       }
     });
@@ -205,15 +214,15 @@
   }
 
   async function loadPageState() {
-    if (isIdePage) {
+    if (isIdePage || !page) {
       state.pageState = createDefaultPageState(null);
       return;
     }
 
-    const localSaved = await DB.get(pageStateKey(pageId));
+    const localSaved = await DB.get(pageStateKey(page.id));
     let remoteSaved = null;
     if (state.currentUser?.authType === "supabase") {
-      remoteSaved = await fetchRemotePageState(pageId);
+      remoteSaved = await fetchRemotePageState(page.id);
     }
     state.pageState = hydratePageState(page, remoteSaved || localSaved || createDefaultPageState(page));
     state.examTimer.remainingMs = state.pageState.examTimer.remainingMs;
@@ -543,6 +552,8 @@
     updateHeaderChrome();
     if (isIdePage) {
       renderIdePage();
+    } else if (isTopicPage) {
+      renderTopicPage();
     } else {
       renderLessonPage();
     }
@@ -578,7 +589,9 @@
     body.dataset.splitMode = String(Boolean(state.workspaceState.splitMode && !isIdePage));
     document.title = isIdePage
       ? `${content.meta.guideTitle} | IDE Lab`
-      : `${content.meta.guideTitle} | ${page.label} ${page.title}`;
+      : isTopicPage
+        ? `${content.meta.guideTitle} | ${page.label} | ${topic.title}`
+        : `${content.meta.guideTitle} | ${page.label} ${page.title}`;
     body.dataset.currentFocus = currentFocus;
   }
 
@@ -586,28 +599,33 @@
     const progress = getPageProgress(page, state.pageState);
     const programProgress = getProgramProgress();
     const nextTopic = getNextPendingTopic(page);
-    const splitMode = state.workspaceState.splitMode;
-    const panelWidth = getEffectiveWorkspacePanelWidth();
+    const hasTopics = page.chapters.length > 0;
+    if (hasTopics) {
+      state.activeTopicId = nextTopic?.id || page.chapters[page.chapters.length - 1].id;
+    }
 
     app.innerHTML = `
-      <section class="studio-layout ${splitMode ? "split-mode" : ""}" style="--workspace-panel-width:${panelWidth}px;">
+      ${renderTopDock({
+        progress,
+        nextTopic,
+        currentFocus: hasTopics ? (nextTopic?.title || page.title) : page.assessment?.title || page.title,
+        ideMode: false
+      })}
+      <section class="studio-layout">
         <aside class="roadmap-rail">
           ${renderRoadmapRail(page, progress, programProgress)}
         </aside>
         <main class="lesson-stage">
           <section class="hero-terminal">
             <div class="hero-terminal-copy">
-              <p class="eyebrow">${escapeHtml(page.label)} · guided learning path</p>
+              <p class="eyebrow">${escapeHtml(`${page.label} · guided learning path`)}</p>
               <h1>${escapeHtml(page.title)}</h1>
               <p class="hero-copy">${escapeHtml(page.subtitle)}</p>
               <p class="hero-copy">${escapeHtml(content.meta.promise)}</p>
-              <div class="hero-pills">
-                <span class="hero-pill">${escapeHtml(page.estimatedTime)}</span>
-                <span class="hero-pill">${escapeHtml(page.audience)}</span>
-                <span id="hero-current-focus" class="hero-pill">${escapeHtml(`Current focus: ${getActiveTopicLabel()}`)}</span>
-              </div>
               <div class="hero-actions">
-                <button class="primary-button" type="button" data-action="toggle-split-lab">${splitMode ? "Hide Split Lab" : "Open Split Lab"}</button>
+                ${hasTopics
+                  ? `<a class="primary-button" href="${getTopicHref(page.id, nextTopic?.id || page.chapters[0].id)}">Open Next Topic</a>`
+                  : `<a class="primary-button" href="ide.html">Open Assessment Lab</a>`}
                 <a class="ghost-button" href="ide.html">Open Full IDE</a>
                 <button class="ghost-button" type="button" data-action="open-auth">Save / Sync Progress</button>
               </div>
@@ -624,29 +642,122 @@
                 <p>${programProgress.completedParts} of 4 parts started.</p>
               </div>
               <div class="summary-card">
-                <span class="summary-label">Next recommended step</span>
-                <strong>${escapeHtml(nextTopic ? nextTopic.title : "Review completed work")}</strong>
-                <p>${escapeHtml(nextTopic ? nextTopic.label : "You have completed the visible roadmap on this part.")}</p>
+                <span class="summary-label">${escapeHtml(hasTopics ? "Next recommended step" : "Assessment mode")}</span>
+                <strong>${escapeHtml(hasTopics ? (nextTopic ? nextTopic.title : "Review completed work") : page.assessment.title)}</strong>
+                <p>${escapeHtml(hasTopics ? (nextTopic ? nextTopic.label : "You have completed the visible roadmap on this part.") : page.assessment.timerLabel)}</p>
               </div>
             </div>
           </section>
 
-          <section class="chapter-stack">
-            ${page.chapters.map((chapter, index) => renderChapter(chapter, index)).join("")}
+          <section class="overview-grid">
+            <section class="chapter-card overview-card">
+              <p class="eyebrow">What You Will Build</p>
+              <h2>${escapeHtml(hasTopics ? "Part goals" : "Assessment goals")}</h2>
+              <ul class="reading-list">
+                ${page.goals.map((goal) => `<li>${escapeHtml(goal)}</li>`).join("")}
+              </ul>
+            </section>
+            <section class="chapter-card overview-card">
+              <p class="eyebrow">Study Flow</p>
+              <h2>${escapeHtml(hasTopics ? "How this part unfolds" : "Assessment flow")}</h2>
+              <ul class="reading-list">
+                ${page.journey.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+              </ul>
+            </section>
           </section>
 
-          ${renderAssessment(page.assessment)}
-          ${renderNotesPanel()}
+          ${hasTopics
+            ? `
+              <section class="topic-overview-grid">
+                ${page.chapters.map((chapter, index) => renderTopicOverviewCard(chapter, index)).join("")}
+              </section>
+              ${renderAssessmentPreview(page)}
+            `
+            : `
+              ${renderAssessment(page.assessment)}
+              ${renderNotesPanel()}
+            `}
         </main>
-        ${splitMode ? `<aside class="workspace-column">${renderWorkspacePanel({ fullPage: false, sourceCollection: collectSources("current") })}</aside>` : ""}
       </section>
     `;
+  }
 
-    setupTopicObserver();
+  function renderTopicPage() {
+    const progress = getPageProgress(page, state.pageState);
+    const topicIndex = page.chapters.findIndex((chapter) => chapter.id === topic.id);
+    const previousTopic = topicIndex > 0 ? page.chapters[topicIndex - 1] : null;
+    const nextTopic = topicIndex < page.chapters.length - 1 ? page.chapters[topicIndex + 1] : null;
+    const splitMode = state.workspaceState.splitMode;
+    state.activeTopicId = topic.id;
+
+    app.innerHTML = `
+      ${renderTopDock({
+        progress,
+        nextTopic,
+        currentFocus: topic.title,
+        ideMode: false
+      })}
+      <section class="study-layout">
+        <aside class="roadmap-rail">
+          ${renderTopicStudyRail(page, topic, progress, previousTopic, nextTopic)}
+        </aside>
+        <main class="lesson-stage">
+          <section class="hero-terminal">
+            <div class="hero-terminal-copy">
+              <p class="eyebrow">${escapeHtml(`${page.label} · ${topic.label} · ${topic.duration}`)}</p>
+              <h1>${escapeHtml(topic.title)}</h1>
+              <p class="hero-copy">${escapeHtml(topic.outcome)}</p>
+              <p class="hero-copy">${escapeHtml(topic.unlock)}</p>
+              <div class="hero-pills">
+                <span class="hero-pill">${escapeHtml(topic.duration)}</span>
+                <span class="hero-pill">${escapeHtml(getChapterStatus(topic))}</span>
+                <span class="hero-pill">${escapeHtml(`${topic.sections.length} study blocks`)}</span>
+              </div>
+              <div class="hero-actions">
+                <a class="ghost-button" href="${getPartHref(page.id)}">Back To ${escapeHtml(page.label)}</a>
+                ${previousTopic ? `<a class="ghost-button" href="${getTopicHref(page.id, previousTopic.id)}">Previous Topic</a>` : ""}
+                ${nextTopic ? `<a class="primary-button" href="${getTopicHref(page.id, nextTopic.id)}">Next Topic</a>` : ""}
+                <button class="ghost-button" type="button" data-action="toggle-split-lab">${splitMode ? "Hide Split Lab" : "Open Split Lab"}</button>
+                <a class="ghost-button" href="ide.html">Open Full IDE</a>
+              </div>
+            </div>
+            <div class="hero-terminal-panels">
+              <div class="summary-card">
+                <span class="summary-label">Current topic</span>
+                <strong>${escapeHtml(topic.title)}</strong>
+                <p>${escapeHtml(`${topic.label} inside ${page.label}`)}</p>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Practice included</span>
+                <strong>${escapeHtml(getTopicPracticeLabel(topic))}</strong>
+                <p>${escapeHtml(topic.sandbox ? topic.sandbox.title : "Reading-first topic")}</p>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Progress</span>
+                <strong>${escapeHtml(`${progress.completedUnits}/${progress.totalUnits} checkpoints`)}</strong>
+                <p>${escapeHtml(nextTopic ? `After this: ${nextTopic.title}` : "You are at the last topic of this part.")}</p>
+              </div>
+            </div>
+          </section>
+
+          ${renderChapter(topic, topicIndex)}
+
+          ${!nextTopic && page.assessment ? renderAssessmentPreview(page, true) : ""}
+          ${renderNotesPanel()}
+          ${splitMode ? `<section class="workspace-inline-shell">${renderWorkspacePanel({ fullPage: false, sourceCollection: collectSources("current") })}</section>` : ""}
+        </main>
+      </section>
+    `;
   }
 
   function renderIdePage() {
     app.innerHTML = `
+      ${renderTopDock({
+        progress: null,
+        nextTopic: null,
+        currentFocus: "Full IDE workspace",
+        ideMode: true
+      })}
       <section class="ide-layout">
         <aside class="roadmap-rail">
           <section class="rail-card">
@@ -696,13 +807,13 @@
     `;
   }
 
-  function renderTopDock({ title, subtitle, progress, nextTopic, currentFocus, ideMode }) {
+  function renderTopDock({ progress, nextTopic, currentFocus, ideMode }) {
     return `
-      <section class="top-dock">
-        <div class="dock-card dock-card-wide">
-          <span class="summary-label">Current workspace</span>
+      <section class="top-dock utility-dock">
+        <div class="dock-card">
+          <span class="summary-label">Current focus</span>
           <strong id="dock-current-focus">${escapeHtml(currentFocus)}</strong>
-          <p>${escapeHtml(ideMode ? subtitle : `You are in ${page.label}. ${subtitle}`)}</p>
+          <p>${escapeHtml(ideMode ? "Use the dedicated lab for experiments and previews." : `Study inside ${page.label} without losing your place.`)}</p>
         </div>
         <div class="dock-card">
           <span class="summary-label">Local time</span>
@@ -719,13 +830,19 @@
           </div>
         </div>
         <div class="dock-card">
-          <span class="summary-label">Assessment timer</span>
-          <strong id="dock-exam-clock">${escapeHtml(formatDuration(getExamRemainingMs()))}</strong>
-          <div class="dock-controls">
-            <button class="mini-button" type="button" data-action="timer-exam-start">Start</button>
-            <button class="mini-button" type="button" data-action="timer-exam-pause">Pause</button>
-            <button class="mini-button" type="button" data-action="timer-exam-reset">Reset</button>
-          </div>
+          ${ideMode ? `
+            <span class="summary-label">Workspace</span>
+            <strong>${escapeHtml(state.workspaceState.loadedSource || "Scratchpad")}</strong>
+            <p>${escapeHtml(state.supabase.setupMessage || "Ready to code.")}</p>
+          ` : `
+            <span class="summary-label">Assessment timer</span>
+            <strong id="dock-exam-clock">${escapeHtml(formatDuration(getExamRemainingMs()))}</strong>
+            <div class="dock-controls">
+              <button class="mini-button" type="button" data-action="timer-exam-start">Start</button>
+              <button class="mini-button" type="button" data-action="timer-exam-pause">Pause</button>
+              <button class="mini-button" type="button" data-action="timer-exam-reset">Reset</button>
+            </div>
+          `}
         </div>
         <div class="dock-card">
           <span class="summary-label">${escapeHtml(progress ? "Progress" : "Status")}</span>
@@ -737,11 +854,12 @@
   }
 
   function renderRoadmapRail(currentPage, progress, programProgress) {
+    const nextTopic = getNextPendingTopic(currentPage);
     return `
       <section class="rail-card">
-        <p class="eyebrow">Guide</p>
-        <h2>${escapeHtml(content.meta.guideTitle)}</h2>
-        <p>${escapeHtml(content.meta.promise)}</p>
+        <p class="eyebrow">${escapeHtml(currentPage.label)}</p>
+        <h2>${escapeHtml(currentPage.title)}</h2>
+        <p>${escapeHtml(currentPage.subtitle)}</p>
         <div class="metric-line">
           <span>Part progress</span>
           <strong>${progress.percent}%</strong>
@@ -750,9 +868,14 @@
           <span>Program progress</span>
           <strong>${programProgress.percent}%</strong>
         </div>
+        <div class="card-actions">
+          ${currentPage.chapters.length
+            ? `<a class="primary-button" href="${getTopicHref(currentPage.id, nextTopic?.id || currentPage.chapters[0].id)}">Open Next Topic</a>`
+            : `<a class="primary-button" href="ide.html">Open Assessment Lab</a>`}
+        </div>
       </section>
       <section class="rail-card">
-        <p class="eyebrow">Part shortcuts</p>
+        <p class="eyebrow">Part Navigation</p>
         <h2>Roadmap</h2>
         <div class="part-list">
           ${Object.values(content.parts).map(renderPartRailCard).join("")}
@@ -762,34 +885,28 @@
           </a>
         </div>
       </section>
-      <section class="rail-card">
-        <p class="eyebrow">Topics</p>
-        <h2>This part</h2>
-        <div class="topic-list">
-          ${currentPage.chapters.map((chapter, index) => renderTopicRailItem(chapter, index)).join("")}
-          <a class="topic-link ${state.activeTopicId === "assessment" ? "active" : ""}" href="#assessment">
-            <span class="topic-index">A</span>
-            <span class="topic-copy">
-              <strong>${escapeHtml(currentPage.assessment.title)}</strong>
-              <small>Assessment zone</small>
-            </span>
-          </a>
-          <a class="topic-link" href="#notes">
-            <span class="topic-index">N</span>
-            <span class="topic-copy">
-              <strong>Notes</strong>
-              <small>Personal study area</small>
-            </span>
-          </a>
-        </div>
-      </section>
+      ${currentPage.chapters.length ? `
+        <section class="rail-card">
+          <p class="eyebrow">Topics</p>
+          <h2>This part</h2>
+          <div class="topic-list">
+            ${currentPage.chapters.map((chapter, index) => renderTopicRailItem(chapter, index)).join("")}
+          </div>
+        </section>
+      ` : `
+        <section class="rail-card">
+          <p class="eyebrow">Assessment</p>
+          <h2>${escapeHtml(currentPage.assessment.title)}</h2>
+          <p>${escapeHtml(currentPage.assessment.description || currentPage.assessment.timerLabel)}</p>
+        </section>
+      `}
     `;
   }
 
   function renderPartRailCard(partItem) {
     const stats = state.allStats[partItem.id] ? getPageProgress(partItem, state.allStats[partItem.id]) : { percent: 0 };
     return `
-      <a class="part-rail-link ${partItem.id === pageId ? "active" : ""}" href="${getPartHref(partItem.id)}">
+      <a class="part-rail-link ${partItem.id === activePartId ? "active" : ""}" href="${getPartHref(partItem.id)}">
         <strong>${escapeHtml(partItem.label)}</strong>
         <span>${escapeHtml(partItem.title)}</span>
         <small>${stats.percent}% complete</small>
@@ -801,7 +918,7 @@
     const chapterComplete = Boolean(state.pageState.completedChapters[chapter.id]);
     const chapterStatus = getChapterStatus(chapter);
     return `
-      <a class="topic-link ${state.activeTopicId === chapter.id ? "active" : ""} ${chapterComplete ? "done" : ""}" href="#${escapeHtml(chapter.id)}">
+      <a class="topic-link ${state.activeTopicId === chapter.id ? "active" : ""} ${chapterComplete ? "done" : ""}" href="${getTopicHref(page.id, chapter.id)}">
         <span class="topic-index">${index + 1}</span>
         <span class="topic-copy">
           <strong>${escapeHtml(chapter.title)}</strong>
@@ -811,14 +928,116 @@
     `;
   }
 
-  function renderTopicShortcuts(currentPage) {
-    return currentPage.chapters
-      .map((chapter, index) => `
-        <a class="shortcut-button ${state.activeTopicId === chapter.id ? "active" : ""}" href="#${escapeHtml(chapter.id)}">
-          ${escapeHtml(`Topic ${index + 1}: ${chapter.title}`)}
-        </a>
-      `)
+  function renderTopicOverviewCard(chapter, index) {
+    const chapterComplete = Boolean(state.pageState.completedChapters[chapter.id]);
+    const sectionList = chapter.sections
+      .slice(0, 3)
+      .map((section) => `<li>${escapeHtml(section.heading)}</li>`)
       .join("");
+
+    return `
+      <article class="chapter-card topic-overview-card">
+        <div class="chapter-header">
+          <div>
+            <p class="eyebrow">${escapeHtml(`${page.label} · Topic ${index + 1} · ${chapter.duration}`)}</p>
+            <h2>${escapeHtml(chapter.title)}</h2>
+            <p class="chapter-copy">${escapeHtml(chapter.outcome)}</p>
+          </div>
+          <span class="score-bubble">${escapeHtml(chapterComplete ? "completed" : "up next")}</span>
+        </div>
+        <div class="topic-overview-meta">
+          <span class="hero-pill">${escapeHtml(chapter.duration)}</span>
+          <span class="hero-pill">${escapeHtml(getTopicPracticeLabel(chapter))}</span>
+        </div>
+        <ul class="reading-list compact-list">
+          ${sectionList}
+        </ul>
+        <div class="card-actions">
+          <a class="primary-button" href="${getTopicHref(page.id, chapter.id)}">Open Topic Page</a>
+          <span class="small-copy">${escapeHtml(getChapterStatus(chapter))}</span>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderAssessmentPreview(currentPage, isInline = false) {
+    const challengeCount = currentPage.assessment?.codingChallenges?.length || 0;
+    return `
+      <section class="chapter-card ${isInline ? "assessment-preview-inline" : "assessment-preview-card"}">
+        <div class="chapter-header">
+          <div>
+            <p class="eyebrow">${escapeHtml(`${currentPage.label} · readiness check`)}</p>
+            <h2>${escapeHtml(currentPage.assessment.title)}</h2>
+            <p class="chapter-copy">${escapeHtml(currentPage.assessment.description || currentPage.assessment.timerLabel)}</p>
+          </div>
+          <span class="score-bubble">${escapeHtml(currentPage.assessment.timerLabel)}</span>
+        </div>
+        <div class="overview-grid">
+          <div class="summary-card">
+            <span class="summary-label">Challenge count</span>
+            <strong>${escapeHtml(String(challengeCount || currentPage.assessment.questions?.length || 0))}</strong>
+            <p>${escapeHtml(challengeCount ? "Coding problems unlocked after the learning topics." : "Concept questions plus coding checks.")}</p>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Best use</span>
+            <strong>${escapeHtml(currentPage.chapters.length ? "After the topic pages" : "Right now")}</strong>
+            <p>${escapeHtml(currentPage.chapters.length ? "Use the assessment once the topic lessons feel stable." : "This part is designed as a realistic timed simulation.")}</p>
+          </div>
+        </div>
+        <div class="card-actions">
+          <a class="ghost-button" href="ide.html">Open Full IDE</a>
+          <button class="ghost-button" type="button" data-action="open-auth">Save / Sync Progress</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderTopicStudyRail(currentPage, currentTopic, progress, previousTopic, nextTopic) {
+    return `
+      <section class="rail-card">
+        <p class="eyebrow">${escapeHtml(currentPage.label)}</p>
+        <h2>${escapeHtml(currentPage.title)}</h2>
+        <p>${escapeHtml(currentPage.subtitle)}</p>
+        <div class="metric-line">
+          <span>Progress</span>
+          <strong>${escapeHtml(`${progress.percent}%`)}</strong>
+        </div>
+        <div class="card-actions">
+          <a class="ghost-button" href="${getPartHref(currentPage.id)}">Back To Overview</a>
+          <a class="ghost-button" href="ide.html">Open Full IDE</a>
+        </div>
+      </section>
+      <section class="rail-card">
+        <p class="eyebrow">Topic Navigator</p>
+        <h2>${escapeHtml(currentTopic.title)}</h2>
+        <div class="topic-list">
+          ${currentPage.chapters.map((chapter, index) => renderTopicRailItem(chapter, index)).join("")}
+        </div>
+      </section>
+      <section class="rail-card">
+        <p class="eyebrow">Sequence</p>
+        <h2>${escapeHtml("Study flow")}</h2>
+        <div class="part-list">
+          ${previousTopic ? `<a class="part-rail-link" href="${getTopicHref(currentPage.id, previousTopic.id)}"><strong>Previous</strong><span>${escapeHtml(previousTopic.title)}</span></a>` : ""}
+          ${nextTopic ? `<a class="part-rail-link" href="${getTopicHref(currentPage.id, nextTopic.id)}"><strong>Next</strong><span>${escapeHtml(nextTopic.title)}</span></a>` : ""}
+          ${!nextTopic && currentPage.assessment ? `<a class="part-rail-link" href="${getPartHref(currentPage.id)}"><strong>Assessment</strong><span>${escapeHtml(currentPage.assessment.title)}</span></a>` : ""}
+        </div>
+      </section>
+    `;
+  }
+
+  function getTopicPracticeLabel(chapter) {
+    const practiceBits = [];
+    if (chapter.sandbox) {
+      practiceBits.push("sandbox");
+    }
+    if (chapter.quiz) {
+      practiceBits.push("quiz");
+    }
+    if (chapter.challenge) {
+      practiceBits.push("challenge");
+    }
+    return practiceBits.length ? practiceBits.join(" + ") : "reading module";
   }
 
   function renderChapter(chapter, index) {
@@ -1098,7 +1317,7 @@
             <button class="ghost-button" type="button" data-action="clear-workspace-output">Clear Output</button>
           </div>
           <div class="workspace-control-group">
-            ${!fullPage ? `
+            ${!fullPage && !isTopicPage ? `
               <label class="slider-label">
                 <span>Split width</span>
                 <input class="workspace-width-range" type="range" min="${splitBounds.min}" max="${splitBounds.max}" step="10" value="${panelWidth}">
@@ -1420,7 +1639,7 @@
   function createDefaultWorkspaceState() {
     return {
       activeLanguage: "javascript",
-      splitMode: !isIdePage,
+      splitMode: false,
       panelWidth: 460,
       loadedSource: "Scratchpad starter",
       buffers: {
@@ -1487,22 +1706,22 @@
   }
 
   async function persistPageState() {
-    if (isIdePage) {
+    if (isIdePage || !page) {
       return;
     }
     state.pageState.examTimer = {
       remainingMs: Math.max(0, getExamRemainingMs())
     };
-    await DB.put(pageStateKey(pageId), state.pageState);
+    await DB.put(pageStateKey(page.id), state.pageState);
     if (state.currentUser?.authType === "supabase") {
       await state.supabase.client.from("progress_states").upsert({
         user_id: state.currentUser.userId,
-        page_id: pageId,
+        page_id: page.id,
         state_json: state.pageState,
         updated_at: new Date().toISOString()
       });
     }
-    state.allStats[pageId] = hydratePageState(page, state.pageState);
+    state.allStats[page.id] = hydratePageState(page, state.pageState);
   }
 
   async function persistWorkspaceState() {
@@ -2253,6 +2472,9 @@
   }
 
   function getActiveTopicLabel() {
+    if (isTopicPage && topic) {
+      return topic.title;
+    }
     if (state.activeTopicId === "assessment") {
       return page?.assessment?.title || "Assessment";
     }
@@ -2423,6 +2645,10 @@
 
   function getPartHref(partId) {
     return partId === "part1" ? "index.html" : `${partId}.html`;
+  }
+
+  function getTopicHref(partId, topicId) {
+    return `topic.html?part=${encodeURIComponent(partId)}&topic=${encodeURIComponent(topicId)}`;
   }
 
   function pageStateKey(partKey) {

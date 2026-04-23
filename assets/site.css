@@ -406,6 +406,10 @@ textarea:focus-visible {
   color: var(--text-soft);
 }
 
+.utility-dock .dock-card {
+  min-height: 100%;
+}
+
 .dock-controls,
 .hero-actions,
 .hero-pills,
@@ -418,7 +422,8 @@ textarea:focus-visible {
 }
 
 .studio-layout,
-.ide-layout {
+.ide-layout,
+.study-layout {
   display: grid;
   grid-template-columns: minmax(220px, 248px) minmax(0, 1fr);
   gap: 20px;
@@ -444,6 +449,10 @@ textarea:focus-visible {
   display: grid;
   gap: 18px;
   min-width: 0;
+}
+
+.study-layout .lesson-stage {
+  gap: 22px;
 }
 
 .studio-layout > *,
@@ -597,6 +606,17 @@ textarea:focus-visible {
   gap: 10px;
 }
 
+.overview-grid,
+.topic-overview-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+
+.topic-overview-grid {
+  align-items: stretch;
+}
+
 .shortcut-strip {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
@@ -650,6 +670,20 @@ textarea:focus-visible {
 .topic-link.done {
   border-color: rgba(67, 228, 141, 0.24);
   background: rgba(67, 228, 141, 0.1);
+}
+
+.topic-overview-card,
+.overview-card,
+.assessment-preview-card,
+.assessment-preview-inline {
+  display: grid;
+  gap: 18px;
+}
+
+.topic-overview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .topic-index {
@@ -871,6 +905,10 @@ textarea:focus-visible {
   min-width: 0;
 }
 
+.workspace-inline-shell {
+  margin-top: 10px;
+}
+
 .studio-layout.split-mode .workspace-column .workspace-panel {
   max-height: none;
   overflow: visible;
@@ -1043,6 +1081,7 @@ textarea:focus-visible {
 
 @media (max-width: 1360px) {
   .studio-layout,
+  .study-layout,
   .ide-layout,
   .hero-terminal,
   .workspace-panel.full-page .workspace-grid,
