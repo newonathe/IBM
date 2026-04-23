@@ -1619,11 +1619,14 @@
     next: { href: "index.html", label: "Restart at Part 1" }
   };
 
-  window.IBM_PREP_CONTENT = {
+  const programContent = {
     meta: {
-      title: "IBM Coding Assessment Guide",
-      description: "Public beginner-friendly prep portal with guided lessons, coding challenges, quizzes, timers, and saved progress.",
-      storageNote: "Accounts and progress are stored in your browser database on this device so the portal works on static GitHub Pages hosting."
+      title: "Programmer Masterclass",
+      guideTitle: "Programmer Masterclass",
+      brandKicker: "Zero-to-industry coding studio",
+      description: "A public beginner-to-industry programming studio with guided lessons, coding challenges, quizzes, split-view labs, and synced progress.",
+      storageNote: "Guest mode works in your browser immediately. For shared multi-device accounts and synced progress, connect Supabase in assets/supabase-config.js and run the SQL in supabase/schema.sql.",
+      promise: "This program is structured as a steady path from complete beginner to junior-level readiness: foundations first, then data structures and patterns, then assessment simulation, then professional engineering topics."
     },
     parts: {
       part1,
@@ -1632,4 +1635,7 @@
       part4
     }
   };
+
+  window.PROGRAMMER_MASTERCLASS_CONTENT = programContent;
+  window.IBM_PREP_CONTENT = programContent;
 })();

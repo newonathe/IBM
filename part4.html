@@ -3,36 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Progression topics after IBM coding assessment prep: clean code, testing, APIs, data work, SQL, and portfolio growth.">
-<title>IBM Coding Assessment Prep | Part 4 Progression Topics</title>
+<meta name="description" content="Programmer Masterclass Part 4: testing, APIs, SQL, clean code, projects, and industry-oriented progression topics.">
+<title>Programmer Masterclass | Part 4 Industry Progression</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body data-page="part4">
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="index.html">
-        <span class="brand-kicker">Public Prep Portal</span>
-        <span class="brand-title">IBM Coding Assessment Guide</span>
+        <span class="brand-kicker">Zero-to-industry coding studio</span>
+        <span class="brand-title">Programmer Masterclass</span>
       </a>
       <nav class="site-nav" aria-label="Primary">
         <a class="nav-link" data-nav="part1" href="index.html">Part 1</a>
         <a class="nav-link" data-nav="part2" href="part2.html">Part 2</a>
         <a class="nav-link" data-nav="part3" href="part3.html">Part 3</a>
         <a class="nav-link" data-nav="part4" href="part4.html">Part 4</a>
+        <a class="nav-link" data-nav="ide" href="ide.html">IDE</a>
       </nav>
       <div class="header-actions">
+        <div id="global-status" class="global-status" aria-live="polite"></div>
         <div id="user-pill" class="user-pill" aria-live="polite"></div>
         <button id="auth-trigger" class="ghost-button" type="button">Sign In</button>
       </div>
     </header>
     <main id="app" class="site-main">
-      <noscript>This site needs JavaScript enabled to load the lessons, coding playgrounds, assessments, and saved progress.</noscript>
+      <noscript>This site needs JavaScript enabled to load the roadmap, coding lab, timers, assessments, and saved progress.</noscript>
     </main>
   </div>
   <div id="auth-modal-root"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/supabase-config.js"></script>
   <script src="assets/content.js"></script>
   <script src="assets/site.js"></script>
 </body>
